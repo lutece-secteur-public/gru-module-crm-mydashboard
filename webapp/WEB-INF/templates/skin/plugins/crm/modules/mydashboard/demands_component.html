@@ -1,0 +1,18 @@
+<legend>#i18n{module.crm.mydashboard.component.demands.description}</legend>
+
+<#if demands_list?size == 0 >
+    <br>
+    <em>Aucune demande enregistrée.</em>
+    <br>
+<#else>
+    <table>
+        <tr>
+            <th>Objet de la demande</th>
+        </tr>
+        <#list demands_list as demand>
+        <tr>
+            <td>${demand.data}</td>
+        </tr>
+        </#list>
+    </table>
+</#if>
