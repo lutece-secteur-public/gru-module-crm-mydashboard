@@ -33,21 +33,44 @@
  */
 package fr.paris.lutece.plugins.crm.modules.mydashboard.web;
 
+import fr.paris.lutece.plugins.crm.business.demand.Demand;
 import fr.paris.lutece.plugins.crm.business.demand.DemandFilter;
+import fr.paris.lutece.plugins.crm.business.demand.DemandStatusCRM;
+import fr.paris.lutece.plugins.crm.business.demand.DemandType;
+import fr.paris.lutece.plugins.crm.business.demand.PaginationFilterSortManager;
 import fr.paris.lutece.plugins.crm.business.user.CRMUser;
+import fr.paris.lutece.plugins.crm.service.category.CategoryService;
 import fr.paris.lutece.plugins.crm.service.demand.DemandService;
+import fr.paris.lutece.plugins.crm.service.demand.DemandStatusCRMService;
+import fr.paris.lutece.plugins.crm.service.demand.DemandTypeService;
+import fr.paris.lutece.plugins.crm.service.parameters.AdvancedParametersService;
 import fr.paris.lutece.plugins.crm.service.user.CRMUserService;
+import fr.paris.lutece.plugins.crm.util.ListUtils;
+import fr.paris.lutece.plugins.crm.util.constants.CRMConstants;
 import fr.paris.lutece.plugins.mydashboard.service.MyDashboardComponent;
+import fr.paris.lutece.plugins.mydashboard.web.MyDashboardApp;
 import fr.paris.lutece.portal.service.i18n.I18nService;
+import fr.paris.lutece.portal.service.message.SiteMessageException;
+import fr.paris.lutece.portal.service.message.SiteMessageService;
 import fr.paris.lutece.portal.service.security.LuteceUser;
 import fr.paris.lutece.portal.service.security.SecurityService;
 import fr.paris.lutece.portal.service.template.AppTemplateService;
+import fr.paris.lutece.portal.service.util.AppLogService;
+import fr.paris.lutece.portal.service.util.AppPathService;
 import fr.paris.lutece.portal.web.l10n.LocaleService;
 import fr.paris.lutece.util.html.HtmlTemplate;
+import fr.paris.lutece.util.html.IPaginator;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang.StringUtils;
 
 /**
  * MyDashboardCRMComponent
@@ -57,11 +80,12 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
     private static final String DASHBOARD_COMPONENT_ID = "crm-mydashboard.demandsComponent";
     private static final String MESSAGE_DASHBOARD_COMPONENT_DESCRIPTION = "module.crm.mydashboard.component.demands.description";
     private static final String TEMPLATE_DASHBOARD_COMPONENT = "skin/plugins/crm/modules/mydashboard/demands_component.html";
-    private static final String MARK_DEMANDS_LIST = "demands_list";
+    private static final String MARK_XPAGE_MYDASHBOARD = "mydashboard";
+  
     
     
     @Override
-    public String getDashboardData( HttpServletRequest request )
+    public String getDashboardData( HttpServletRequest request )  
     {
         LuteceUser user = SecurityService.getInstance().getRegisteredUser(request);
         CRMUserService crmUserService = CRMUserService.getService(  );
@@ -70,17 +94,181 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
         
         if( crmUser != null )
         {
-            DemandService demandService = DemandService.getService(  );
-            Map<String, Object> model = new HashMap<String, Object>(  );
-            DemandFilter dFilter = new DemandFilter();
-            dFilter.setIdCRMUser( crmUser.getIdCRMUser() );
-            model.put( MARK_DEMANDS_LIST, demandService.findByFilter( dFilter ) );
+        	 Map<String, Object> model = new HashMap<String, Object>(  );
+             if ( crmUser != null )
+             {
+     	           //research by filter
+     	            DemandFilter dFilter = new DemandFilter(  );
+     	            dFilter.setIdCRMUser( crmUser.getIdCRMUser(  ) );
+     	
+     	            PaginationFilterSortManager paginationFilterSortManager = new PaginationFilterSortManager( request,MARK_XPAGE_MYDASHBOARD);
+     	
+     	            String strSession = (String) ( request.getParameter( CRMConstants.PARAMETER_SESSION ) );
+     	
+     	            if ( StringUtils.isBlank( strSession ) )
+     	            {
+     	                paginationFilterSortManager.cleanSession(  );
+     	            }
+     	
+     	            String strIdStatusToSort = (String) ( request.getParameter( CRMConstants.PARAMETER_ID_STATUS ) );
+     	            String strSortField = (String) ( request.getParameter( CRMConstants.PARAMETER_SORT_ATTRIBUTE ) );
+     	            String strSortOrder = (String) ( request.getParameter( CRMConstants.PARAMETER_SORT_ORDER ) );
+     	
+     	            int nIdStatusToSort = -1;
+     	
+     	            if ( StringUtils.isNotEmpty( strIdStatusToSort ) )
+     	            {
+     	                nIdStatusToSort = Integer.parseInt( strIdStatusToSort );
+     	            }
+     	
+     	            if ( StringUtils.isNotEmpty( strSortField ) && StringUtils.isNotEmpty( strSortOrder ) )
+     	            {
+     	                paginationFilterSortManager.storeSort( nIdStatusToSort, strSortField,
+     	                    Boolean.parseBoolean( strSortOrder ) );
+     	            }
+     	
+     	            String strModificationDate = request.getParameter( CRMConstants.PARAMETER_MODIFICATIONDATE );
+     	            String strDemandType = request.getParameter( CRMConstants.PARAMETER_DEMANDTYPE );
+     	            String strNotification = request.getParameter( CRMConstants.PARAMETER_NOTIFICATION );
+     	
+     	            if ( StringUtils.isNotBlank( strModificationDate ) || StringUtils.isNotBlank( strDemandType ) ||
+     	                    StringUtils.isNotBlank( strNotification ) )
+     	            {
+     	                paginationFilterSortManager.cleanSessionFilter(  );
+     	            }
+     	
+     	            if ( StringUtils.isNotBlank( strModificationDate ) )
+     	            {
+     	                Date modificationDate = checkFormatModificationDateFilter( strModificationDate, request );
+     	                paginationFilterSortManager.storeFilterModificationDate( modificationDate );
+     	                paginationFilterSortManager.storeFilterStringModificationDate( strModificationDate );
+     	            }
+     	
+     	            if ( StringUtils.isNotBlank( strDemandType ) )
+     	            {
+     	                int nIdDemandType = Integer.parseInt( strDemandType );
+     	                paginationFilterSortManager.storeFilterDemandType( nIdDemandType );
+     	            }
+     	
+     	            if ( StringUtils.isNotBlank( strNotification ) )
+     	            {
+     	                paginationFilterSortManager.storeFilterNotification( strNotification );
+     	            }
+     	
+     	            Date dateModificationSession = paginationFilterSortManager.retrieveFilterModificationDate(  );
+     	
+     	            if ( dateModificationSession != null )
+     	            {
+     	                dFilter.setDateModification( dateModificationSession );
+     	                model.put( CRMConstants.MARK_MODIFICATIONDATE,
+     	                    paginationFilterSortManager.retrieveFilterStringModificationDate(  ) );
+     	            }
+     	
+     	            Integer nIdDemandTypeSession = paginationFilterSortManager.retrieveFilterDemandType(  );
+     	
+     	            if ( ( nIdDemandTypeSession != null ) && ( nIdDemandTypeSession >= 0 ) )
+     	            {
+     	                dFilter.setIdDemandType( nIdDemandTypeSession );
+     	            }
+     	
+     	            String strNotificationSession = paginationFilterSortManager.retrieveFilterNotification(  );
+     	
+     	            if ( StringUtils.isNotBlank( strNotificationSession ) )
+     	            {
+     	                dFilter.setNotification( strNotificationSession );
+     	            }
+     	            
+     	            model.put( CRMConstants.MARK_MAP_DEMANDS_LIST,
+     	                    DemandService.getService().findByFilterMap( dFilter, request.getLocale(  ), paginationFilterSortManager ) );
+     	            model.put( CRMConstants.MARK_FILTER, dFilter );
+     	            
+     	            Map<String, IPaginator<Demand>> mapPaginator = new HashMap<String, IPaginator<Demand>>(  );
+     	            Map<String, String> mapNbItemsPerPage = new HashMap<String, String>(  );
+     	            int nIdStatus;
+     	
+     	            for ( DemandStatusCRM statusCRM : DemandStatusCRMService.getService(  )
+     	                                                                    .getAllStatusCRM( request.getLocale(  ) ) )
+     	            {
+     	                nIdStatus = statusCRM.getIdStatusCRM(  );
+     	
+     	                IPaginator<Demand> paginator = paginationFilterSortManager.retrievePaginator( nIdStatus );
+     	                int nItemsPerPage = paginationFilterSortManager.retrieveItemsPerPage( nIdStatus );
+     	
+     	                mapNbItemsPerPage.put( Integer.toString( nIdStatus ), Integer.toString( nItemsPerPage ) );
+     	                mapPaginator.put( Integer.toString( nIdStatus ), paginator );
+     	            }
+     	            model.put( CRMConstants.MARK_STATUS_CRM_LIST, DemandStatusCRMService.getService(  ).getAllStatusCRM( request.getLocale(  ) ) );
+     	
+     	            model.put( CRMConstants.MARK_MAP_PAGINATOR, mapPaginator );
+     	            model.put( CRMConstants.MARK_MAP_NB_ITEMS_PER_PAGE, mapNbItemsPerPage );
+     	            model.put( CRMConstants.MARK_DISPLAYDRAFT,
+     	            		AdvancedParametersService.getService(  ).isParameterValueByKey( CRMConstants.CONSTANT_DISPLAYDRAFT ) );
+     	             
+             	}
+             	model.put( CRMConstants.MARK_LOCALE, request.getLocale(  ) );
+                 model.put( CRMConstants.MARK_MAP_DEMAND_TYPES_LIST, DemandTypeService.getService().findForLuteceUser( request ) );
+                 model.put( CRMConstants.MARK_CATEGORIES_LIST,
+                     CategoryService.getService().getCategories( request.getLocale(  ), false, true ) );
+                  model.put( CRMConstants.MARK_DEMAND_TYPES_LIST, DemandTypeService.getService().findAll(  ) );
+               
+                 model.put( CRMConstants.MARK_CRM_USER, crmUser );
+                 List<DemandType> listAllOpenedDemandType = initListAllOpenedDemandType(  );
+
+                 model.put( CRMConstants.MARK_DEMAND_TYPES_REFLIST,
+                     ListUtils.toReferenceList( listAllOpenedDemandType, "idDemandType", "label", "" ) );
+                 
+                 model.put(CRMConstants.MARK_MAP_DO_LOGIN,SecurityService.getInstance(  ).getLoginPageUrl() );
+                 model.put(CRMConstants.MARK_BASE_URL, AppPathService.getBaseUrl(request));
             HtmlTemplate template = AppTemplateService.getTemplate( TEMPLATE_DASHBOARD_COMPONENT,
                     LocaleService.getDefault(  ), model );
 
             return template.getHtml(  );
         }
         return "";
+    }
+    
+    /**
+     * Get the list of all the opened demand types only
+     * @return the list of opened demand types
+     */
+    private List<DemandType> initListAllOpenedDemandType(  )
+    {
+        List<DemandType> listAllDemandType = DemandTypeService.getService(  ).findAll(  );
+        List<DemandType> listAllOpenedDemandType = new ArrayList<DemandType>(  );
+
+        for ( DemandType demandType : listAllDemandType )
+        {
+            if ( demandType.isOpen(  ) )
+            {
+                listAllOpenedDemandType.add( demandType );
+            }
+        }
+
+        return listAllOpenedDemandType;
+    }
+    /**
+     * Check the format of the filter modification date
+     * 
+     */
+    private Date checkFormatModificationDateFilter( String strModificationDate, HttpServletRequest request )
+        
+    {
+        SimpleDateFormat sdf = new SimpleDateFormat( "dd/MM/yyyy" );
+        sdf.setLenient( true );
+
+        Date d = new Date(  );
+
+        try
+        {
+            d = sdf.parse( strModificationDate );
+        }
+        catch ( Exception e )
+        {
+           AppLogService.error(e);
+        }
+
+        
+        return d;
     }
 
     @Override
@@ -94,5 +282,7 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
     {
         return I18nService.getLocalizedString( MESSAGE_DASHBOARD_COMPONENT_DESCRIPTION, locale );
     }
+    
+    
     
 }

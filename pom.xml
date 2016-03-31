@@ -32,7 +32,7 @@
         <dependency>
             <artifactId>plugin-crm</artifactId>
             <groupId>fr.paris.lutece.plugins</groupId>
-            <version>[1.1.0,)</version>
+            <version>[1.1.2-SNAPSHOT,)</version>
             <type>lutece-plugin</type>
         </dependency>
         <dependency>
