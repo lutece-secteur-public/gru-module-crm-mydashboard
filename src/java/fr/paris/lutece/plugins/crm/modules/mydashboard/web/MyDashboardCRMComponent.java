@@ -33,6 +33,18 @@
  */
 package fr.paris.lutece.plugins.crm.modules.mydashboard.web;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang.StringUtils;
+
 import fr.paris.lutece.plugins.crm.business.demand.Demand;
 import fr.paris.lutece.plugins.crm.business.demand.DemandFilter;
 import fr.paris.lutece.plugins.crm.business.demand.DemandStatusCRM;
@@ -44,14 +56,12 @@ import fr.paris.lutece.plugins.crm.service.demand.DemandService;
 import fr.paris.lutece.plugins.crm.service.demand.DemandStatusCRMService;
 import fr.paris.lutece.plugins.crm.service.demand.DemandTypeService;
 import fr.paris.lutece.plugins.crm.service.parameters.AdvancedParametersService;
+import fr.paris.lutece.plugins.crm.service.user.CRMUserAttributesService;
 import fr.paris.lutece.plugins.crm.service.user.CRMUserService;
 import fr.paris.lutece.plugins.crm.util.ListUtils;
 import fr.paris.lutece.plugins.crm.util.constants.CRMConstants;
 import fr.paris.lutece.plugins.mydashboard.service.MyDashboardComponent;
-import fr.paris.lutece.plugins.mydashboard.web.MyDashboardApp;
 import fr.paris.lutece.portal.service.i18n.I18nService;
-import fr.paris.lutece.portal.service.message.SiteMessageException;
-import fr.paris.lutece.portal.service.message.SiteMessageService;
 import fr.paris.lutece.portal.service.security.LuteceUser;
 import fr.paris.lutece.portal.service.security.SecurityService;
 import fr.paris.lutece.portal.service.template.AppTemplateService;
@@ -60,17 +70,6 @@ import fr.paris.lutece.portal.service.util.AppPathService;
 import fr.paris.lutece.portal.web.l10n.LocaleService;
 import fr.paris.lutece.util.html.HtmlTemplate;
 import fr.paris.lutece.util.html.IPaginator;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
-
-import org.apache.commons.lang.StringUtils;
 
 /**
  * MyDashboardCRMComponent
@@ -88,6 +87,9 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
     public String getDashboardData( HttpServletRequest request )  
     {
         LuteceUser user = SecurityService.getInstance().getRegisteredUser(request);
+        
+        createOrUpdateCRMAccount( user );
+     
         CRMUserService crmUserService = CRMUserService.getService(  );
 
         CRMUser crmUser = crmUserService.findByUserGuid( user.getName() );
@@ -281,6 +283,51 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
     public String getComponentDescription( Locale locale )
     {
         return I18nService.getLocalizedString( MESSAGE_DASHBOARD_COMPONENT_DESCRIPTION, locale );
+    }
+    
+    
+    /**
+     * Create a CRM account if the current user does not have one
+     * @param user the LuteceUser
+     */
+    private void createOrUpdateCRMAccount( LuteceUser user )
+    {
+    	  if(	user!=null	)
+          {
+         
+	    	CRMUser crmUser = CRMUserService.getService().findByUserGuid( user.getName(  ) );
+	
+	        if ( crmUser == null )
+	        {
+	            crmUser = new CRMUser(  );
+	            crmUser.setUserGuid( user.getName(  ) );
+	            crmUser.setStatus( CRMUser.STATUS_ACTIVATED );
+	
+	            Map<String, String> userAttributes = new HashMap<String, String>(  );
+	
+	            for ( String strUserAttributeKey : CRMUserAttributesService.getService().getUserAttributeKeys(  ) )
+	            {
+	                userAttributes.put( strUserAttributeKey, user.getUserInfo( strUserAttributeKey ) );
+	            }
+	
+	            crmUser.setUserAttributes( userAttributes );
+	            CRMUserService.getService().create( crmUser );
+	        }
+	        else if ( crmUser.isMustBeUpdated())
+	        {
+	        	 crmUser.setMustBeUpdated(false);
+		         crmUser.setStatus( CRMUser.STATUS_ACTIVATED );
+		         Map<String, String> userAttributes = new HashMap<String, String>(  );
+		         for ( String strUserAttributeKey : CRMUserAttributesService.getService().getUserAttributeKeys(  ) )
+	             {
+	                userAttributes.put( strUserAttributeKey, user.getUserInfo( strUserAttributeKey ) );
+	             }
+	
+		         crmUser.setUserAttributes( userAttributes );
+		         CRMUserService.getService().update( crmUser );
+	        	
+	        }
+          }
     }
     
     
