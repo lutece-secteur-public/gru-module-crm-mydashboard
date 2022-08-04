@@ -1,0 +1,66 @@
+[1mdiff --git a/webapp/WEB-INF/templates/skin/plugins/crm/modules/mydashboard/demands_component.html b/webapp/WEB-INF/templates/skin/plugins/crm/modules/mydashboard/demands_component.html[m
+[1mindex 8bfc5ee..063a600 100644[m
+[1m--- a/webapp/WEB-INF/templates/skin/plugins/crm/modules/mydashboard/demands_component.html[m
+[1m+++ b/webapp/WEB-INF/templates/skin/plugins/crm/modules/mydashboard/demands_component.html[m
+[36m@@ -8,6 +8,7 @@[m
+             </#if>[m
+         </#list>[m
+     </#if>[m
+[32m+[m[32m    <#return "?">[m
+ </#function>[m
+ [m
+ <div class="row">[m
+[36m@@ -19,9 +20,9 @@[m
+                         <h2>#i18n{crm.crm.labelDemandsList}</h2>[m
+                     </div>[m
+                     <div class="row">[m
+[31m-                    [m
+[31m-                     [m
+[31m-                        [m
+[32m+[m
+[32m+[m
+[32m+[m
+                         <#list status_crm_list as status_crm>[m
+                             <!-- Doesn't display the draft bloc if the checkbox is not checked in the parameters -->[m
+                             <#if (status_crm.idStatusCRM != 0 || (status_crm.idStatusCRM == 0 && bDisplayDraft = true ))>[m
+[36m@@ -49,14 +50,14 @@[m
+                                                 <th>[m
+                                                     #i18n{crm.crm.columnNotification}[m
+                                                     <@sort jsp_url="jsp/site/Portal.jsp?page=mydashboard&session=true&id_status=${status_crm.idStatusCRM}" attribute="unreadNotification" />[m
+[31m-                                                </th>                                   [m
+[32m+[m[32m                                                </th>[m
+                                             </tr>[m
+                                             <#list demands_list as demand>[m
+                                                 <#assign demand_type = getDemandType( demand_types_list, demand.idDemandType )>[m
+                                                 <#if demand_type??>[m
+                                                     <tr>[m
+                                                         <td>[m
+[31m-                                                            ${demand_type.label!}[m
+[32m+[m[32m                                                            <#if demand_type != "?">${demand_type.label!}</#if>[m
+                                                         </td>[m
+                                                         <td>[m
+                                                             ${demand.dateModification?string.short}[m
+[36m@@ -66,7 +67,7 @@[m
+                                                         </td>[m
+                                                             <#if status_crm.idStatusCRM = 0>[m
+                                                                 <td>[m
+[31m-                                                                    <#if demand_type.isOpen(  )>[m
+[32m+[m[32m                                                                    <#if demand_type != "?" && demand_type.isOpen(  )>[m
+                                                                         <a class="btn btn-primary btn-sm" href="jsp/site/plugins/crm/DoEditDemand.jsp?id_demand=${demand.idDemand}" target="${demand_type.target}" title="#i18n{crm.crm.buttonModify}">[m
+                                                                             <i class="glyphicon glyphicon-edit"></i>[m
+                                                                         </a>[m
+[36m@@ -86,7 +87,7 @@[m
+                                                                         ${demand.numberUnreadNotifications}[m
+                                                                     </span>[m
+                                                                 </#if>[m
+[31m-                                                            </#if> [m
+[32m+[m[32m                                                            </#if>[m
+                                                         </td>[m
+                                                     </tr>[m
+                                                 </#if>[m
+[36m@@ -103,5 +104,3 @@[m
+     </div>[m
+ </div>[m
+ </div>[m
+[31m-[m
+[31m-[m
