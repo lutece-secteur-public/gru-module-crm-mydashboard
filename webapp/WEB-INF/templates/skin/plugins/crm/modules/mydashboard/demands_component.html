@@ -8,6 +8,7 @@
             </#if>
         </#list>
     </#if>
+    <#return "?">
 </#function>
 
 <div class="row">
@@ -19,9 +20,9 @@
                         <h2>#i18n{crm.crm.labelDemandsList}</h2>
                     </div>
                     <div class="row">
-                    
-                     
-                        
+
+
+
                         <#list status_crm_list as status_crm>
                             <!-- Doesn't display the draft bloc if the checkbox is not checked in the parameters -->
                             <#if (status_crm.idStatusCRM != 0 || (status_crm.idStatusCRM == 0 && bDisplayDraft = true ))>
@@ -49,14 +50,14 @@
                                                 <th>
                                                     #i18n{crm.crm.columnNotification}
                                                     <@sort jsp_url="jsp/site/Portal.jsp?page=mydashboard&session=true&id_status=${status_crm.idStatusCRM}" attribute="unreadNotification" />
-                                                </th>                                   
+                                                </th>
                                             </tr>
                                             <#list demands_list as demand>
                                                 <#assign demand_type = getDemandType( demand_types_list, demand.idDemandType )>
                                                 <#if demand_type??>
                                                     <tr>
                                                         <td>
-                                                            ${demand_type.label!}
+                                                            <#if demand_type != "?">${demand_type.label!}</#if>
                                                         </td>
                                                         <td>
                                                             ${demand.dateModification?string.short}
@@ -66,7 +67,7 @@
                                                         </td>
                                                             <#if status_crm.idStatusCRM = 0>
                                                                 <td>
-                                                                    <#if demand_type.isOpen(  )>
+                                                                    <#if demand_type != "?" && demand_type.isOpen(  )>
                                                                         <a class="btn btn-primary btn-sm" href="jsp/site/plugins/crm/DoEditDemand.jsp?id_demand=${demand.idDemand}" target="${demand_type.target}" title="#i18n{crm.crm.buttonModify}">
                                                                             <i class="glyphicon glyphicon-edit"></i>
                                                                         </a>
@@ -86,7 +87,7 @@
                                                                         ${demand.numberUnreadNotifications}
                                                                     </span>
                                                                 </#if>
-                                                            </#if> 
+                                                            </#if>
                                                         </td>
                                                     </tr>
                                                 </#if>
@@ -103,5 +104,3 @@
     </div>
 </div>
 </div>
-
-
