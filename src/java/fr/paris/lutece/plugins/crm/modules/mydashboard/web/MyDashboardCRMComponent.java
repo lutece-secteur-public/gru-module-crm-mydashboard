@@ -41,9 +41,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import fr.paris.lutece.plugins.crm.business.demand.Demand;
 import fr.paris.lutece.plugins.crm.business.demand.DemandFilter;
@@ -67,19 +70,41 @@ import fr.paris.lutece.portal.service.security.SecurityService;
 import fr.paris.lutece.portal.service.template.AppTemplateService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPathService;
-import fr.paris.lutece.portal.web.l10n.LocaleService;
 import fr.paris.lutece.util.html.HtmlTemplate;
 import fr.paris.lutece.util.html.IPaginator;
 
 /**
  * MyDashboardCRMComponent
  */
+@ApplicationScoped
+@Named( "crm-mydashboard.mydashboardDemandsComponent" )
 public class MyDashboardCRMComponent extends MyDashboardComponent
 {
     private static final String DASHBOARD_COMPONENT_ID = "crm-mydashboard.demandsComponent";
     private static final String MESSAGE_DASHBOARD_COMPONENT_DESCRIPTION = "module.crm.mydashboard.component.demands.description";
     private static final String TEMPLATE_DASHBOARD_COMPONENT = "skin/plugins/crm/modules/mydashboard/demands_component.html";
     private static final String MARK_XPAGE_MYDASHBOARD = "mydashboard";
+
+    @Inject
+    private CRMUserService _crmUserService;
+
+    @Inject
+    private CRMUserAttributesService _crmUserAttributesService;
+
+    @Inject
+    private DemandService _demandService;
+
+    @Inject
+    private DemandStatusCRMService _demandStatusCRMService;
+
+    @Inject
+    private DemandTypeService _demandTypeService;
+
+    @Inject
+    private CategoryService _categoryService;
+
+    @Inject
+    private AdvancedParametersService _advancedParametersService;
   
     
     
@@ -90,9 +115,7 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
         
         createOrUpdateCRMAccount( user );
      
-        CRMUserService crmUserService = CRMUserService.getService(  );
-
-        CRMUser crmUser = crmUserService.findByUserGuid( user.getName() );
+        CRMUser crmUser = _crmUserService.findByUserGuid( user.getName() );
         
         if( crmUser != null )
         {
@@ -181,14 +204,14 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
      	            }
      	            
      	            model.put( CRMConstants.MARK_MAP_DEMANDS_LIST,
-     	                    DemandService.getService().findByFilterMap( dFilter, request.getLocale(  ), paginationFilterSortManager ) );
+     	                    _demandService.findByFilterMap( dFilter, request.getLocale(  ), paginationFilterSortManager ) );
      	            model.put( CRMConstants.MARK_FILTER, dFilter );
      	            
      	            Map<String, IPaginator<Demand>> mapPaginator = new HashMap<String, IPaginator<Demand>>(  );
      	            Map<String, String> mapNbItemsPerPage = new HashMap<String, String>(  );
      	            int nIdStatus;
      	
-     	            for ( DemandStatusCRM statusCRM : DemandStatusCRMService.getService(  )
+     	            for ( DemandStatusCRM statusCRM : _demandStatusCRMService
      	                                                                    .getAllStatusCRM( request.getLocale(  ) ) )
      	            {
      	                nIdStatus = statusCRM.getIdStatusCRM(  );
@@ -199,19 +222,19 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
      	                mapNbItemsPerPage.put( Integer.toString( nIdStatus ), Integer.toString( nItemsPerPage ) );
      	                mapPaginator.put( Integer.toString( nIdStatus ), paginator );
      	            }
-     	            model.put( CRMConstants.MARK_STATUS_CRM_LIST, DemandStatusCRMService.getService(  ).getAllStatusCRM( request.getLocale(  ) ) );
+     	            model.put( CRMConstants.MARK_STATUS_CRM_LIST, _demandStatusCRMService.getAllStatusCRM( request.getLocale(  ) ) );
      	
      	            model.put( CRMConstants.MARK_MAP_PAGINATOR, mapPaginator );
      	            model.put( CRMConstants.MARK_MAP_NB_ITEMS_PER_PAGE, mapNbItemsPerPage );
      	            model.put( CRMConstants.MARK_DISPLAYDRAFT,
-     	            		AdvancedParametersService.getService(  ).isParameterValueByKey( CRMConstants.CONSTANT_DISPLAYDRAFT ) );
+     	            		_advancedParametersService.isParameterValueByKey( CRMConstants.CONSTANT_DISPLAYDRAFT ) );
      	             
              	}
              	model.put( CRMConstants.MARK_LOCALE, request.getLocale(  ) );
-                 model.put( CRMConstants.MARK_MAP_DEMAND_TYPES_LIST, DemandTypeService.getService().findForLuteceUser( request ) );
+                 model.put( CRMConstants.MARK_MAP_DEMAND_TYPES_LIST, _demandTypeService.findForLuteceUser( request ) );
                  model.put( CRMConstants.MARK_CATEGORIES_LIST,
-                     CategoryService.getService().getCategories( request.getLocale(  ), false, true ) );
-                  model.put( CRMConstants.MARK_DEMAND_TYPES_LIST, DemandTypeService.getService().findAll(  ) );
+                     _categoryService.getCategories( request.getLocale(  ), false, true ) );
+                  model.put( CRMConstants.MARK_DEMAND_TYPES_LIST, _demandTypeService.findAll(  ) );
                
                  model.put( CRMConstants.MARK_CRM_USER, crmUser );
                  List<DemandType> listAllOpenedDemandType = initListAllOpenedDemandType(  );
@@ -222,7 +245,7 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
                  model.put(CRMConstants.MARK_MAP_DO_LOGIN,SecurityService.getInstance(  ).getLoginPageUrl() );
                  model.put(CRMConstants.MARK_BASE_URL, AppPathService.getBaseUrl(request));
             HtmlTemplate template = AppTemplateService.getTemplate( TEMPLATE_DASHBOARD_COMPONENT,
-                    LocaleService.getDefault(  ), model );
+                    request.getLocale(  ), model );
 
             return template.getHtml(  );
         }
@@ -235,7 +258,7 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
      */
     private List<DemandType> initListAllOpenedDemandType(  )
     {
-        List<DemandType> listAllDemandType = DemandTypeService.getService(  ).findAll(  );
+        List<DemandType> listAllDemandType = _demandTypeService.findAll(  );
         List<DemandType> listAllOpenedDemandType = new ArrayList<DemandType>(  );
 
         for ( DemandType demandType : listAllDemandType )
@@ -295,7 +318,7 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
     	  if(	user!=null	)
           {
          
-	    	CRMUser crmUser = CRMUserService.getService().findByUserGuid( user.getName(  ) );
+	    	CRMUser crmUser = _crmUserService.findByUserGuid( user.getName(  ) );
 	
 	        if ( crmUser == null )
 	        {
@@ -305,26 +328,26 @@ public class MyDashboardCRMComponent extends MyDashboardComponent
 	
 	            Map<String, String> userAttributes = new HashMap<String, String>(  );
 	
-	            for ( String strUserAttributeKey : CRMUserAttributesService.getService().getUserAttributeKeys(  ) )
+	            for ( String strUserAttributeKey : _crmUserAttributesService.getUserAttributeKeys(  ) )
 	            {
 	                userAttributes.put( strUserAttributeKey, user.getUserInfo( strUserAttributeKey ) );
 	            }
 	
 	            crmUser.setUserAttributes( userAttributes );
-	            CRMUserService.getService().create( crmUser );
+	            _crmUserService.create( crmUser );
 	        }
 	        else if ( crmUser.isMustBeUpdated())
 	        {
 	        	 crmUser.setMustBeUpdated(false);
 		         crmUser.setStatus( CRMUser.STATUS_ACTIVATED );
 		         Map<String, String> userAttributes = new HashMap<String, String>(  );
-		         for ( String strUserAttributeKey : CRMUserAttributesService.getService().getUserAttributeKeys(  ) )
+		         for ( String strUserAttributeKey : _crmUserAttributesService.getUserAttributeKeys(  ) )
 	             {
 	                userAttributes.put( strUserAttributeKey, user.getUserInfo( strUserAttributeKey ) );
 	             }
 	
 		         crmUser.setUserAttributes( userAttributes );
-		         CRMUserService.getService().update( crmUser );
+		         _crmUserService.update( crmUser );
 	        	
 	        }
           }
